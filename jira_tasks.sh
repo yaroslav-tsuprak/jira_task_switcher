@@ -11,7 +11,7 @@ set -e
 FIRST_HASH="$1"
 SECOND_HASH="$2"
 JIRA_FILE_CREDENTIALS="jira_settings"
-DEBUG=true
+DEBUG=false
 
 function info {
   logger -t "jirascript" -p info "$1"
@@ -24,6 +24,7 @@ function check_requirements {
     info "Missing file: jira_settings"
     info "Created a new file: jira_settings"
     echo -e "JIRA_USER=\nJIRA_PASSWORD=" >> $JIRA_FILE_CREDENTIALS
+    exit 1
   fi
 
   # Settings in file "jira_settings" should define following variables:
@@ -33,19 +34,19 @@ function check_requirements {
 
   if [ -z ${JIRA_USER} ] || [ -z ${JIRA_PASSWORD} ]; then
     info "Missing required settings in jira_settings file"
-    exit 0
+    exit 1
   fi
 
   if [ -z ${FIRST_HASH} ] || [ -z ${SECOND_HASH} ]; then
     info "Missing required settings!"
     info "An example: jira_tasks.sh [first_hash] [second_hash]"
-    exit 0
+    exit 1
   fi
 
   if [ ! -d "/srv/ed" ]; then
     info "Directory /srv/ed DOES NOT exists."
     info "Please, clone master branch to /srv before"
-    exit 0
+    exit 1
   fi
 }
 
@@ -53,7 +54,7 @@ function switch_task_status() {
   result=`curl -sS -u ${JIRA_USER}:${JIRA_PASSWORD} -XPOST -H 'Content-Type: application/json' -d '{"transition":{"id":'${1}'}}' https://jira.aigen.ru/rest/api/latest/issue/${2}/transitions?.fields`
   if [[ $DEBUG ]]; then
     info "DEBUG: switch_task_status: ID ${1} - TASK ${2}"
-    [[ -z ${result} ]] && info "DEBUG: switch_task_status: Web request result: ${result}"
+    [[ ! -z ${result} ]] && info "DEBUG: switch_task_status: Web request result: ${result}"
   fi
   info "Jira task ${2} have been switched to Testing"
 }
@@ -87,6 +88,7 @@ function main {
     check_task $line
   done
   popd
+  exit 0
 }
 
 main
