@@ -51,18 +51,16 @@ function check_requirements {
 
 function switch_task_status() {
   result=`curl -sS -u ${JIRA_USER}:${JIRA_PASSWORD} -XPOST -H 'Content-Type: application/json' -d '{"transition":{"id":'${1}'}}' https://jira.aigen.ru/rest/api/latest/issue/${2}/transitions?.fields`
-  if [ $DEBUG ]; then
+  if [[ $DEBUG ]]; then
     info "DEBUG: switch_task_status: ID ${1} - TASK ${2}"
-    info "DEBUG: switch_task_status: Web request result: ${result}"
+    [[ -z ${result} ]] && info "DEBUG: switch_task_status: Web request result: ${result}"
   fi
   info "Jira task ${2} have been switched to Testing"
 }
 
 function check_task() {
   task=${1}
-  if [ $DEBUG ]; then
-    info "DEBUG: check_task: Checking Jira task ${task}"
-  fi
+  [[ $DEBUG ]] && info "DEBUG: check_task: Checking Jira task ${task}"
   # Get task info
   result=$(curl -sS -u ${JIRA_USER}:${JIRA_PASSWORD} -XGET -H 'Content-Type: application/json' https://jira.aigen.ru/rest/api/2/issue/$task/transitions)
   if [[ "$result" =~ .*"error".*  ]]; then
@@ -70,18 +68,12 @@ function check_task() {
   else
     i=0
     echo $result | jq '.transitions[] | .id' | while read id; do
-      if [ $DEBUG ]; then
-        info "DEBUG: check_task: Task status ID: ${id}"
-      fi
+      [[ $DEBUG ]] && info "DEBUG: check_task: Task status ID: ${id}"
       name=$(echo $result | jq '.transitions['${i}'] | .name')
       ((i=i+1))
-      if [ $DEBUG ]; then
-        info "DEBUG: check_task: Task status NAME: ${name}"
-      fi
+      [[ $DEBUG ]] && info "DEBUG: check_task: Task status NAME: ${name}"
       # If task status name contains "esting" then we can switch it to Testing
-      if [[ "$name" =~ .*"esting".*  ]]; then
-        switch_task_status $id $task
-      fi
+      [[ "$name" =~ .*"esting".*  ]] && switch_task_status $id $task
     done
   fi
 }
